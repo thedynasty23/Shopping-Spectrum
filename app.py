@@ -15,7 +15,7 @@ from pathlib import Path
 ###############################################################################
 @st.cache_data(show_spinner=False)
 def load_customer_csv(csv_path: str) -> pd.DataFrame:
-    df = pd.read_csv("customer_dat_with_recommendation.csv")
+    df = pd.read_csv("customer_dat_with_recommendation(1).csv")
     return df
 
 @st.cache_resource(show_spinner=False)
