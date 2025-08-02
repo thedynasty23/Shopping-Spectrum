@@ -15,7 +15,7 @@ from pathlib import Path
 ###############################################################################
 @st.cache_data(show_spinner=False)
 def load_customer_csv(csv_path: str) -> pd.DataFrame:
-    df = pd.read_csv("customer_dat_with_recommendation(1).csv")
+    df = pd.read_csv(csv_path)
     return df
 
 @st.cache_resource(show_spinner=False)
@@ -56,7 +56,7 @@ def build_item_similarity(df: pd.DataFrame):
     return sim_df
 
 @st.cache_resource(show_spinner=False)
-def load_kmeans_model(kmeans_rfm_model.joblib: str):
+def load_kmeans_model(pkl_path: str):
     return joblib.load(pkl_path)
 
 ###############################################################################
@@ -79,7 +79,7 @@ if section == "Product Recommendation":
     st.header("🔍 Product Recommendation")
 
     # Load CSV & build similarity
-    data_file = Path("customer_data_with_recommendations.csv")
+    data_file = Path("customer_data_with_recommendations(1).csv")
     if not data_file.exists():
         st.error("CSV file not found in working directory.")
         st.stop()
@@ -110,9 +110,9 @@ if section == "Product Recommendation":
 if section == "Customer Segmentation":
     st.header("👥 Predict Customer Segment")
 
-    kmeans_path = Path("kmeans_model.pkl")
+    kmeans_path = Path("kmeans_rfm_model.pkl")
     if not kmeans_path.exists():
-        st.error("Trained K-Means model (kmeans_model.pkl) not found.")
+        st.error("Trained K-Means model (kmeans_rfm_model.pkl) not found.")
         st.stop()
 
     model = load_kmeans_model(str(kmeans_path))
