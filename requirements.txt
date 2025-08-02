@@ -1,0 +1,15 @@
+collections
+google
+joblib
+matplotlib
+mpl_toolkits
+numpy
+pandas
+plotly
+scipy
+seaborn
+sklearn
+streamlit
+tabulate
+warnings
+yellowbrick
