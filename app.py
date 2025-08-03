@@ -75,7 +75,6 @@ st.markdown(
         }}
 
         /* ------------- SIDEBAR ------------- */
-        /* add a subtle divider + hover effect */
         section[data-testid="stSidebar"] > div:first-child {{
             border-right:1px solid #e0e0e0;
         }}
@@ -113,7 +112,7 @@ st.markdown(
 
         /* keep labels / headers black */
         label, h1, h2, h3, h4, h5, h6, p, span, div {{
-            color:#000000;                    /* ensure black text */
+            color:#000000;
         }}
     </style>
     """,
@@ -146,7 +145,6 @@ with st.sidebar:
     st.markdown("---")
     st.caption("© 2025 Shopper Spectrum")
 
-
 # -------------------------------------------------------------------
 # 5A.  PRODUCT RECOMMENDATION PAGE
 # -------------------------------------------------------------------
@@ -164,14 +162,18 @@ if page == "rec":
     sim_df, desc2code, code2desc = build_similarity_and_lookup(df)
 
     # ------------------ UI ------------------
-    description = st.text_input("Enter Product Name", placeholder="e.g. GREEN VINTAGE SPOT BEAKER")
-    k           = st.slider("Number of recommendations", 1, 10, 5, key="k")
+    product_list = sorted(desc2code.index.unique())   # all product names
+
+    description = st.selectbox(
+        "Choose a Product",
+        options=product_list,
+        index=0,
+        placeholder="Select a product"
+    )
+
+    k = st.slider("Number of recommendations", 1, 10, 5, key="k")
 
     if st.button("Recommend"):
-        if description not in desc2code:
-            st.error("Product not found. Check spelling or try another item.")
-            st.stop()
-
         code      = desc2code[description]
         scores    = sim_df.loc[code].drop(code).sort_values(ascending=False)
         top_codes = scores.head(k).index
