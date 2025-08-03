@@ -143,15 +143,46 @@ if page == "rec":
     k = st.slider("Number of similar products to show", 1, 10, 5)
 
     if st.button("Recommend"):
-        try:
-            code = desc2code[description]
-            scores = sim_df.loc[code].drop(code).sort_values(ascending=False)
-            top_codes = scores.head(k).index
-            st.subheader("Products customers also buy:")
-            for c in top_codes:
-                st.write(f"• **{code2desc.get(c, c)}**")
-        except Exception as e:
-            st.error(f"Recommendation failed: {e}")
+    try:
+        code = desc2code[description]          # product chosen by user
+        scores = (
+            sim_df.loc[code]                   # similarity scores for that code
+                  .drop(code)                  # exclude itself
+                  .sort_values(ascending=False)
+        )
+        top_codes = scores.head(k).index       # k most-similar codes
+
+        # Build a mapping StockCode ➜ Description directly from the CSV
+        code2desc_full = (
+            df[['Rec1_StockCode','Rec1_Description',
+                'Rec2_StockCode','Rec2_Description',
+                'Rec3_StockCode','Rec3_Description',
+                'Rec4_StockCode','Rec4_Description',
+                'Rec5_StockCode','Rec5_Description',
+                'Rec6_StockCode','Rec6_Description',
+                'Rec7_StockCode','Rec7_Description',
+                'Rec8_StockCode','Rec8_Description',
+                'Rec9_StockCode','Rec9_Description',
+                'Rec10_StockCode','Rec10_Description']]
+            .set_index(lambda x: x // 2)       # pair codes with descriptions
+            .stack()                           # long form
+            .dropna()                          # keep valid cells
+            .unstack(0)                        # two columns: code & desc
+            .rename(columns={0: 'StockCode', 1: 'Description'})
+        )
+
+        # Create a dict for fast lookup
+        csv_lookup = dict(zip(code2desc_full['StockCode'],
+                              code2desc_full['Description']))
+
+        st.subheader("Products customers also buy:")
+        for c in top_codes:
+            desc = csv_lookup.get(c)
+            if desc:                           # only show if we have a name
+                st.write(f"• **{desc}**")
+        # If a code has no description, it’s skipped—no “Unknown product” shown
+    except Exception as e:
+        st.error(f"Recommendation failed: {e}")
 
 # ===================================================================
 # 4B.  CUSTOMER SEGMENTATION PAGE
