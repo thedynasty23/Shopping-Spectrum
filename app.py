@@ -19,24 +19,24 @@ def load_customer_csv(csv_path: str) -> pd.DataFrame:
 
 @st.cache_resource(show_spinner=False)
 def build_similarity_and_lookup(df: pd.DataFrame):
-    # inside build_similarity_and_lookup(df) – add just after the function starts
-    if 'Description' not in df.columns or 'StockCode' not in df.columns:
+    # Ensure generic Description / StockCode columns exist
+    if "Description" not in df.columns or "StockCode" not in df.columns:
         df = df.copy()
-        df['Description'] = df['Rec1_Description']
-        df['StockCode']   = df['Rec1_StockCode']
+        df["Description"] = df["Rec1_Description"]
+        df["StockCode"]   = df["Rec1_StockCode"]
 
-    # Build description↔code lookup  (uses first occurrence only)
-    lookup = df[['Description', 'StockCode']].drop_duplicates().set_index('Description')['StockCode']
-    reverse_lookup = lookup.reset_index().set_index('StockCode')['Description']
+    lookup = (df[["Description", "StockCode"]]
+              .drop_duplicates()
+              .set_index("Description")["StockCode"])
+    reverse_lookup = lookup.reset_index().set_index("StockCode")["Description"]
 
-    # Build long customer-item table (all Rec columns)
+    # Build long customer-item table (all Rec- columns)
     rec_cols = [c for c in df.columns if c.startswith("Rec") and c.endswith("StockCode")]
     long_df  = pd.melt(df[["CustomerID"] + rec_cols],
                        id_vars="CustomerID",
                        value_vars=rec_cols,
                        value_name="StockCode").dropna().drop_duplicates()
 
-    # Sparse matrix
     cust_ids = long_df["CustomerID"].astype("category").cat.codes
     item_ids = long_df["StockCode" ].astype("category").cat.codes
     mat      = csr_matrix((np.ones(len(long_df), dtype=np.int8),
@@ -49,10 +49,10 @@ def build_similarity_and_lookup(df: pd.DataFrame):
 
 @st.cache_resource(show_spinner=False)
 def load_bundle(pkl_path: str):
-    return joblib.load(pkl_path)      # {"scaler": ..., "model": ...}
+    return joblib.load(pkl_path)
 
 # -------------------------------------------------------------------
-# 2.   Global page setup  (white theme + accent)
+# 2.   Page setup  (white theme + accent)
 # -------------------------------------------------------------------
 st.set_page_config(
     page_title="Shopper Spectrum",
@@ -61,28 +61,60 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-st.markdown("""
-<style>
-[data-testid="stAppViewContainer"] { background:white; }
-[data-testid="stSidebar"]{ background:#f8f9fa;padding-top:2rem; }
-h1,h2,h3{color:#111!important;}
-.stButton>button{width:100%;background:#4f8bf9;color:white;}
-.stButton>button:hover{background:#3b6ec9;color:white;}
-div[data-testid="stSpinner"] > div > div { color:#4f8bf9; }  /* spinner */
-</style>
-""", unsafe_allow_html=True)
+st.markdown(
+    """
+    <style>
+    [data-testid="stAppViewContainer"] {background:white;}
+    [data-testid="stSidebar"]{background:#f8f9fa;padding-top:1.5rem;}
+    h1,h2,h3{color:#111!important;}
+    .stButton>button{width:100%;background:#4f8bf9;color:white;}
+    .stButton>button:hover{background:#3b6ec9;color:white;}
+    div[data-testid="stSpinner"] > div > div {color:#4f8bf9;}
+    /* slider-style nav buttons */
+    .nav-btn{cursor:pointer;padding:0.6rem 1.2rem;border-radius:6px;
+             display:flex;align-items:center;gap:0.4rem;font-weight:600;
+             color:#555;font-size:0.9rem;margin-bottom:0.5rem;}
+    .nav-btn:hover{background:#f0f4ff;color:#1f52ff;}
+    .nav-btn.selected{background:#1f52ff;color:#fff;}
+    .icon-circle{width:12px;height:12px;border-radius:50%;}
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 # -------------------------------------------------------------------
-# 3.   Sidebar navigation
+# 3.   Sidebar slider-style navigation
 # -------------------------------------------------------------------
-st.sidebar.header("🛒  Shopper Spectrum")
-choice = st.sidebar.radio("Go to", ("Product Recommendation", "Customer Segmentation"),
-                          format_func=lambda x: "🔍 " + x if x.startswith("Product") else "👥 " + x)
+if "page" not in st.session_state:
+    st.session_state.page = "rec"   # default
+
+# query-string reading so clicks survive reruns
+qs = st.experimental_get_query_params()
+if "page" in qs:
+    st.session_state.page = qs["page"][0]
+
+def nav_button(key, label, color):
+    selected = "selected" if st.session_state.page == key else ""
+    st.sidebar.markdown(
+        f"""
+        <div class="nav-btn {selected}" onclick="window.location.href='?page={key}'">
+            <div class="icon-circle" style="background:{color};"></div>{label}
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+st.sidebar.markdown("### Dashboard")
+nav_button("rec", "Product Recommendation", "#e63946")  # red dot
+nav_button("seg", "Customer Segmentation", "#4b4bff")   # blue dot
+st.sidebar.markdown("---")
+
+page = st.session_state.page  # convenience alias
 
 # ===================================================================
 # 4A.  PRODUCT RECOMMENDATION  (by Description)
 # ===================================================================
-if choice.endswith("Recommendation"):
+if page == "rec":
     st.header("🔍 Product Recommendation")
     data_path = Path("customer_data_with_recommendations.csv")
 
@@ -94,14 +126,15 @@ if choice.endswith("Recommendation"):
         df = load_customer_csv(data_path)
         sim_df, desc2code, code2desc = build_similarity_and_lookup(df)
 
-    # --- User input ---
-    description = st.selectbox("Select a product (description)",
-                               sorted(desc2code.index), index=0,
-                               help="Dropdown shows unique product descriptions.")
+    description = st.selectbox(
+        "Select a product (description)",
+        sorted(desc2code.index),
+        index=0,
+        help="Dropdown shows unique product descriptions."
+    )
     k = st.slider("How many similar products?", 1, 10, 5,
                   help="Top-N items ranked by cosine similarity.")
 
-    # --- Action ---
     if st.button("Recommend"):
         code = desc2code[description]
         scores = sim_df.loc[code].drop(code).sort_values(ascending=False)
@@ -111,9 +144,9 @@ if choice.endswith("Recommendation"):
             st.write(f"• **{code2desc.get(c, c)}**")
 
 # -------------------------------------------------------------------
-# 4B.  CUSTOMER SEGMENTATION  (3-feature model)
+# 4B.  CUSTOMER SEGMENTATION (6-feature model)
 # -------------------------------------------------------------------
-else:
+elif page == "seg":
     st.header("👥 Customer Segmentation")
 
     pkl_path = Path("kmeans_rfm_model.pkl")
@@ -121,35 +154,33 @@ else:
         st.error("Trained K-Means model not found.")
         st.stop()
 
-    # If your pickle contains ONLY the model, load it directly.
-    # If it contains {"scaler": ..., "model": ...}, extract both.
-    obj = joblib.load(pkl_path)
-    if isinstance(obj, dict):
-        scaler = obj["scaler"]
-        kmeans = obj["model"]
-        use_scaler = True
-    else:
-        kmeans = obj
-        use_scaler = False
+    kmeans = joblib.load(pkl_path)   # pickle holds only the model
 
-    # --- three numeric inputs ---
     col1, col2, col3 = st.columns(3)
     with col1:
-        recency   = st.number_input("Recency (days)",      min_value=0,   value=30)
+        recency   = st.number_input("Recency (days)", 0, value=30)
     with col2:
-        frequency = st.number_input("Frequency (orders)",  min_value=0,   value=5)
+        frequency = st.number_input("Frequency (orders)", 0, value=5)
     with col3:
-        monetary  = st.number_input("Monetary (₹ total)",  min_value=0.0, value=500.0)
+        monetary  = st.number_input("Monetary (total ₹)", 0.0, value=500.0)
+
+    col4, col5, col6 = st.columns(3)
+    with col4:
+        basket_avg = st.number_input("Avg. basket ₹", 0.0, value=100.0)
+    with col5:
+        tenure     = st.number_input("Tenure (months)", 0, value=12)
+    with col6:
+        returns    = st.number_input("Returns (count)", 0, value=0)
 
     if st.button("Predict segment"):
-        features = np.array([[recency, frequency, monetary]])
-        if use_scaler:
-            features = scaler.transform(features)
-        cluster = int(kmeans.predict(features)[0])
-
-        seg_labels = {0: "High-Value", 1: "Regular",
-                      2: "Occasional", 3: "At-Risk"}
-        st.success(f"Predicted segment → **{seg_labels.get(cluster, f'Cluster {cluster}')}**")
+        features = [[recency, frequency, monetary,
+                     basket_avg, tenure, returns]]
+        cluster  = int(kmeans.predict(features)[0])
+        seg_names = {0:"High-Value", 1:"Regular",
+                     2:"Occasional", 3:"At-Risk"}
+        st.success(
+            f"Predicted segment → **{seg_names.get(cluster, f'Cluster {cluster}')}**"
+        )
 
 # -------------------------------------------------------------------
 # 5.   Footer
