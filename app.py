@@ -116,7 +116,7 @@ with st.sidebar:
 # ===================================================================
 if page == "rec":
     st.header("🔍 Product Recommendation")
-    data_path = Path("customer_data_with_recommendations.csv")
+    data_path = Path("https://github.com/thedynasty23/Shopping-Spectrum/blob/main/customer_data_with_recommendations.csv")
 
     if not data_path.exists():
         st.error("Required data file 'customer_data_with_recommendations.csv' not found.")
@@ -151,7 +151,7 @@ if page == "rec":
 elif page == "seg":
     st.header("👥 Customer Segmentation")
 
-    pkl_path = Path("kmeans_rfm_model.pkl")
+    pkl_path = Path("https://github.com/thedynasty23/Shopping-Spectrum/blob/main/kmeans_rfm_model.pkl")
     if not pkl_path.exists():
         st.error("Trained model 'kmeans_rfm_model.pkl' not found.")
         st.stop()
