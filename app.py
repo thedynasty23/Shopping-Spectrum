@@ -79,7 +79,7 @@ if section == "Product Recommendation":
     st.header("🔍 Product Recommendation")
 
     # Load CSV & build similarity
-    data_file = Path("customer_data_with_recommendations(1).csv")
+    data_file = Path("customer_data_with_recommendations.csv")
     if not data_file.exists():
         st.error("CSV file not found in working directory.")
         st.stop()
