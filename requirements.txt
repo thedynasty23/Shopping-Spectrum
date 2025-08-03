@@ -1,7 +1,6 @@
 google
 joblib
 matplotlib
-mpl_toolkits
 numpy
 pandas
 plotly
