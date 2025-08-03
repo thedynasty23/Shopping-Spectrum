@@ -89,7 +89,7 @@ if "page" not in st.session_state:
     st.session_state.page = "rec"   # default
 
 # query-string reading so clicks survive reruns
-qs = st.experimental_get_query_params()
+qs = st.query_params
 if "page" in qs:
     st.session_state.page = qs["page"][0]
 
