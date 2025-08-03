@@ -111,7 +111,7 @@ if choice.endswith("Recommendation"):
             st.write(f"• **{code2desc.get(c, c)}**")
 
 # -------------------------------------------------------------------
-# 4B.  CUSTOMER SEGMENTATION  (no scaler in pickle)
+# 4B.  CUSTOMER SEGMENTATION  (3-feature model)
 # -------------------------------------------------------------------
 else:
     st.header("👥 Customer Segmentation")
@@ -121,23 +121,35 @@ else:
         st.error("Trained K-Means model not found.")
         st.stop()
 
-    kmeans = load_bundle(pkl_path)   # <— returns the estimator itself
+    # If your pickle contains ONLY the model, load it directly.
+    # If it contains {"scaler": ..., "model": ...}, extract both.
+    obj = joblib.load(pkl_path)
+    if isinstance(obj, dict):
+        scaler = obj["scaler"]
+        kmeans = obj["model"]
+        use_scaler = True
+    else:
+        kmeans = obj
+        use_scaler = False
 
+    # --- three numeric inputs ---
     col1, col2, col3 = st.columns(3)
     with col1:
-        recency   = st.number_input("Recency (days)",             0, value=30)
+        recency   = st.number_input("Recency (days)",      min_value=0,   value=30)
     with col2:
-        frequency = st.number_input("Frequency (purchases)",      0, value=5)
+        frequency = st.number_input("Frequency (orders)",  min_value=0,   value=5)
     with col3:
-        monetary  = st.number_input("Monetary (total spend ₹)",   0.0, value=500.0)
+        monetary  = st.number_input("Monetary (₹ total)",  min_value=0.0, value=500.0)
 
     if st.button("Predict segment"):
-        # Pass raw features directly: shape (1, 3)
-        cluster = int(kmeans.predict([[recency, frequency, monetary]])[0])
+        features = np.array([[recency, frequency, monetary]])
+        if use_scaler:
+            features = scaler.transform(features)
+        cluster = int(kmeans.predict(features)[0])
 
-        labels = {0: "High-Value", 1: "Regular",
-                  2: "Occasional", 3: "At-Risk"}
-        st.success(f"Predicted segment → **{labels.get(cluster, f'Cluster {cluster}')}**")
+        seg_labels = {0: "High-Value", 1: "Regular",
+                      2: "Occasional", 3: "At-Risk"}
+        st.success(f"Predicted segment → **{seg_labels.get(cluster, f'Cluster {cluster}')}**")
 
 # -------------------------------------------------------------------
 # 5.   Footer
