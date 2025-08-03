@@ -1,7 +1,7 @@
 # app.py
-# ---------------------------------------------
-# Shopper Spectrum Dashboard   (Streamlit)
-# ---------------------------------------------
+# -------------------------------------------------------------------
+# Shopper Spectrum Dashboard  –  Minimal white layout (Streamlit)
+# -------------------------------------------------------------------
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -10,136 +10,129 @@ from scipy.sparse import csr_matrix
 from sklearn.metrics.pairwise import cosine_similarity
 from pathlib import Path
 
-###############################################################################
-# ---------- 1.  Load data & models (cached) ----------------------------------
-###############################################################################
+# -------------------------------------------------------------------
+# 1.   Caching helpers
+# -------------------------------------------------------------------
 @st.cache_data(show_spinner=False)
 def load_customer_csv(csv_path: str) -> pd.DataFrame:
-    df = pd.read_csv(csv_path)
-    return df
+    return pd.read_csv(csv_path)
 
 @st.cache_resource(show_spinner=False)
 def build_item_similarity(df: pd.DataFrame):
-    """
-    Build a sparse Customer × Product matrix and
-    compute item-to-item cosine similarity.
-    Returns: (similarity_df, product_lookup)
-    """
-    pivot = (df[['CustomerID', 'Rec1_StockCode']]
-             .rename(columns={'Rec1_StockCode': 'StockCode'}))
+    rec_cols = [c for c in df.columns if c.startswith("Rec") and c.endswith("StockCode")]
+    long_df  = pd.melt(df[["CustomerID"] + rec_cols],
+                       id_vars="CustomerID",
+                       value_vars=rec_cols,
+                       value_name="StockCode").dropna()
+    events   = long_df.drop_duplicates()
 
-    # Stack the 10 rec columns into long form  (faster than loop)
-    rec_cols = [c for c in df.columns if c.startswith('Rec') and c.endswith('StockCode')]
-    long_df = pd.melt(df[['CustomerID'] + rec_cols],
-                      id_vars='CustomerID',
-                      value_vars=rec_cols,
-                      value_name='StockCode').dropna()
-
-    # Concatenate, drop duplicates to mark purchase/exposure
-    events = pd.concat([pivot, long_df])[['CustomerID', 'StockCode']].dropna().drop_duplicates()
-
-    # Numeric index mapping
-    cust_ids = events['CustomerID'].astype(int).astype('category').cat.codes
-    item_ids = events['StockCode'].astype(str).astype('category').cat.codes
-
-    matrix = csr_matrix(
-        (np.ones(len(events), dtype=np.int8),
-         (cust_ids, item_ids)),
-        shape=(cust_ids.max()+1, item_ids.max()+1)
-    )
-
-    sim = cosine_similarity(matrix.T, dense_output=False)
-    # similarity to DataFrame with StockCode labels
-    idx_to_code = events['StockCode'].astype('category').cat.categories
-    sim_df = pd.DataFrame(sim.toarray(), index=idx_to_code, columns=idx_to_code)
-
-    return sim_df
+    cust_ids = events["CustomerID"].astype("category").cat.codes
+    item_ids = events["StockCode" ].astype("category").cat.codes
+    matrix   = csr_matrix((np.ones(len(events), dtype=np.int8),
+                           (cust_ids, item_ids)))
+    sim      = cosine_similarity(matrix.T, dense_output=False)
+    labels   = events["StockCode"].astype("category").cat.categories
+    return pd.DataFrame(sim.toarray(), index=labels, columns=labels)
 
 @st.cache_resource(show_spinner=False)
-def load_kmeans_model(pkl_path: str):
-    return joblib.load(pkl_path)
+def load_bundle(pkl_path: str):
+    return joblib.load(pkl_path)      # returns {"scaler": ..., "model": ...}
 
-###############################################################################
-# ---------------------- 2.   Page layout -------------------------------------
-###############################################################################
-st.set_page_config(page_title="Shopper Spectrum Dashboard",
-                   page_icon="🛒",
-                   layout="wide")
+# -------------------------------------------------------------------
+# 2.   Global page setup  (→ white background)
+# -------------------------------------------------------------------
+st.set_page_config(
+    page_title="Shopper Spectrum",
+    page_icon="🛒",
+    layout="wide",
+    initial_sidebar_state="expanded",
+    menu_items={}
+)
 
-st.title("🛒 Shopper Spectrum Dashboard")
+# Make Streamlit’s built-in theme pure white
+st.markdown(
+    """
+    <style>
+        [data-testid="stAppViewContainer"] {
+            background: white;
+        }
+        [data-testid="stSidebar"] {
+            background: #f8f9fa;          /* subtle grey for sidebar only */
+            padding-top: 2rem;
+        }
+        h1, h2, h3 { color: #111 !important; }
+        .stButton>button { width: 100%; }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
-# Sidebar – navigation
-section = st.sidebar.radio("Choose module", ["Product Recommendation",
-                                             "Customer Segmentation"])
+# -------------------------------------------------------------------
+# 3.   Sidebar navigation
+# -------------------------------------------------------------------
+st.sidebar.header("🛒 Shopper Spectrum")
+choice = st.sidebar.radio("Go to", ("Product Recommendation", "Customer Segmentation"))
 
-###############################################################################
-# ------------ 3A.   Product Recommendation -----------------------------------
-###############################################################################
-if section == "Product Recommendation":
+# -------------------------------------------------------------------
+# 4A.  Product Recommendation
+# -------------------------------------------------------------------
+if choice == "Product Recommendation":
     st.header("🔍 Product Recommendation")
 
-    # Load CSV & build similarity
-    data_file = Path("customer_data_with_recommendations.csv")
-    if not data_file.exists():
-        st.error("CSV file not found in working directory.")
+    data_path = Path("customer_data_with_recommendations.csv")   # ⚠ adjust if needed
+    if not data_path.exists():
+        st.error("CSV file not found.")
         st.stop()
 
-    df = load_customer_csv(str(data_file))
-    sim_df = build_item_similarity(df)
+    df      = load_customer_csv(data_path)
+    sim_df  = build_item_similarity(df)
 
-    # User input
-    prod_codes = sim_df.index.tolist()
-    default_code = prod_codes[0] if prod_codes else ""
-    product = st.selectbox("Select a StockCode", prod_codes, index=0)
+    stock   = st.selectbox("Enter / pick a StockCode", sim_df.index)
+    k       = st.slider("How many products to suggest?", 1, 10, 5)
 
-    n_recs = st.slider("Number of recommendations", 1, 10, 5, 1)
+    if st.button("Recommend"):
+        recs = (
+            sim_df.loc[stock]
+                  .drop(stock)
+                  .sort_values(ascending=False)
+                  .head(k)
+                  .index
+                  .tolist()
+        )
+        st.subheader("Recommended Products:")
+        for item in recs:
+            st.write(f"- **{item}**")
 
-    if st.button("Get Recommendations", use_container_width=True):
-        if product not in sim_df.index:
-            st.warning("Unknown StockCode.")
-        else:
-            scores = sim_df.loc[product].drop(product).sort_values(ascending=False)
-            top_items = scores.head(n_recs).index
-            st.subheader("📋 Recommended Products")
-            for code in top_items:
-                st.write(f"- **{code}**")
+# -------------------------------------------------------------------
+# 4B.  Customer Segmentation
+# -------------------------------------------------------------------
+else:
+    st.header("👥 Customer Segmentation")
 
-###############################################################################
-# --------------- 3B.   Customer Segmentation ---------------------------------
-###############################################################################
-if section == "Customer Segmentation":
-    st.header("👥 Predict Customer Segment")
-
-    kmeans_path = Path("kmeans_rfm_model.pkl")
-    if not kmeans_path.exists():
-        st.error("Trained K-Means model (kmeans_rfm_model.pkl) not found.")
+    pkl_path = Path("kmeans_rfm_model.pkl")
+    if not pkl_path.exists():
+        st.error("Trained model not found.")
         st.stop()
 
-    # ---------- NEW: load both scaler & model --------------------------------
-    bundle = load_kmeans_model(str(kmeans_path))
-    scaler = bundle["scaler"]        # ← same key you used when dumping
-    kmeans = bundle["model"]
+    bundle  = load_bundle(pkl_path)
+    scaler  = bundle["scaler"]
+    kmeans  = bundle["model"]
 
-    # Numeric inputs
     col1, col2, col3 = st.columns(3)
     with col1:
-        recency = st.number_input("Recency (days)",     min_value=0,  value=30)
+        recency   = st.number_input("Recency (days)",      0, value=30)
     with col2:
-        frequency = st.number_input("Frequency (#)",    min_value=0,  value=5)
+        frequency = st.number_input("Frequency (purchases)",0, value=5)
     with col3:
-        monetary = st.number_input("Monetary (₹ total)",min_value=0.0,value=500.0)
+        monetary  = st.number_input("Monetary (total spend)",0.0, value=500.0)
 
-    if st.button("Predict Cluster", use_container_width=True):
-        sample   = np.array([[recency, frequency, monetary]])
-        sample_z = scaler.transform(sample)             # ← scale first
-        cluster  = int(kmeans.predict(sample_z)[0])
+    if st.button("Predict Segment"):
+        X_scaled = scaler.transform([[recency, frequency, monetary]])
+        cluster  = int(kmeans.predict(X_scaled)[0])
+        labels   = {0: "High-Value", 1: "Regular", 2: "Occasional", 3: "At-Risk"}
+        st.success(f"Predicted segment → **{labels.get(cluster, f'Cluster {cluster}')}**")
 
-        seg_map = {0: "High-Value", 1: "Regular",
-                   2: "Occasional", 3: "At-Risk"}
-        seg_label = seg_map.get(cluster, f"Cluster {cluster}")
-        st.success(f"💡 Predicted Segment: **{seg_label}**  (cluster {cluster})")
-
-###############################################################################
-# ----------------- 4.   Footer ------------------------------------------------
-###############################################################################
+# -------------------------------------------------------------------
+# 5.   Footer
+# -------------------------------------------------------------------
 st.caption("© 2025 Shopper Spectrum • Powered by Streamlit")
