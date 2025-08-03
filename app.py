@@ -61,26 +61,30 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-        /* make all buttons & info boxes use white text */
-        div.stButton > button, .stAlert, .stMetric {
-            color:#fff !important;
+        /* ---------- GLOBAL ---------- */
+        body, .stApp {                       /* whole page */
+            background:#ffffff !important;   /* white page */
+            color:#000000 !important;        /* black text */
         }
 
-        /* blue primary buttons */
-        div.stButton > button {
-            background-color:#3474ff;        /* keep Streamlit blue */
-            border:1px solid #3474ff;
+        /* ---------- RECTANGLE-STYLE WIDGETS ---------- */
+        /* Dark background + white text */
+        div.stButton>button,
+        .stNumberInput  input,               /* number_input box */
+        .stAlert,
+        .stMetric {
+            background:#1e1e1e !important;   /* dark rectangle */
+            color:#ffffff !important;        /* white text      */
+            border:1px solid #1e1e1e !important;
         }
 
-        /* black form boxes (Streamlit text_input / number_input) */
-        .stNumberInput>div>div>input {
-            background:#1e1e1e !important;  /* dark box */
-            color:#fff           !important; /* white typing */
+        /* ---------- KEEP LABELS / HEADERS DEFAULT ---------- */
+        label, h1, h2, h3, h4, h5, h6, p, span, div {
+            color:#000000 !important;        /* black everywhere else */
         }
-        /* header colour remains default (don’t override) */
     </style>
     """,
-    unsafe_allow_html=True,
+    unsafe_allow_html=True
 )
 
 # -------------------------------------------------------------------
