@@ -61,38 +61,27 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    /* ----------  existing rules ---------- */
-    [data-testid="stAppViewContainer"] {background:white;}
-    [data-testid="stSidebar"]{background:#f8f9fa;padding-top:1.5rem;}
-    h1,h2,h3{color:#111!important;}
-    .stButton>button{width:100%;background:#4f8bf9;color:white;}
-    .stButton>button:hover{background:#3b6ec9;color:white;}
-    div[data-testid="stSpinner"] > div > div {color:#4f8bf9;}
-    .nav-btn{cursor:pointer;padding:0.6rem 1.2rem;border-radius:6px;
-             display:flex;align-items:center;gap:0.4rem;font-weight:600;
-             color:#555;font-size:0.9rem;margin-bottom:0.5rem;}
-    .nav-btn:hover{background:#f0f4ff;color:#1f52ff;}
-    .nav-btn.selected{background:#1f52ff;color:#fff;}
-    .icon-circle{width:12px;height:12px;border-radius:50%;}
-    
-    /* ----------  NEW rule: force body text to black ---------- */
-    body, div[data-testid="stAppViewContainer"] * {
-        color:#000 !important;
-    }
+        /* make all buttons & info boxes use white text */
+        div.stButton > button, .stAlert, .stMetric {
+            color:#fff !important;
+        }
+
+        /* blue primary buttons */
+        div.stButton > button {
+            background-color:#3474ff;        /* keep Streamlit blue */
+            border:1px solid #3474ff;
+        }
+
+        /* black form boxes (Streamlit text_input / number_input) */
+        .stNumberInput>div>div>input {
+            background:#1e1e1e !important;  /* dark box */
+            color:#fff           !important; /* white typing */
+        }
+        /* header colour remains default (don’t override) */
     </style>
     """,
-    unsafe_allow_html=True
+    unsafe_allow_html=True,
 )
-
-# -------------------------------------------------------------------
-# 3.   Sidebar Navigation
-# -------------------------------------------------------------------
-if "page" not in st.session_state:
-    st.session_state.page = "rec"
-
-qs = st.query_params
-if "page" in qs:
-    st.session_state.page = qs["page"] if isinstance(qs["page"], str) else qs["page"][0]
 
 # -------------------------------------------------------------------
 # 3.   Sidebar Navigation
