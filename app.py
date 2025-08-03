@@ -61,6 +61,7 @@ st.set_page_config(
 st.markdown(
     """
     <style>
+    /* ----------  existing rules ---------- */
     [data-testid="stAppViewContainer"] {background:white;}
     [data-testid="stSidebar"]{background:#f8f9fa;padding-top:1.5rem;}
     h1,h2,h3{color:#111!important;}
@@ -73,6 +74,11 @@ st.markdown(
     .nav-btn:hover{background:#f0f4ff;color:#1f52ff;}
     .nav-btn.selected{background:#1f52ff;color:#fff;}
     .icon-circle{width:12px;height:12px;border-radius:50%;}
+    
+    /* ----------  NEW rule: force body text to black ---------- */
+    body, div[data-testid="stAppViewContainer"] * {
+        color:#000 !important;
+    }
     </style>
     """,
     unsafe_allow_html=True
