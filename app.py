@@ -133,18 +133,19 @@ if "page" in qs:
 
 page = st.session_state.page
 
-def sidebar_btn(name, label, emoji):
-    selected = "selected" if page == name else ""
-    st.sidebar.markdown(
-        f'<a href="?page={name}" class="sidebar-btn {selected}">{emoji}&nbsp;&nbsp;{label}</a>',
-        unsafe_allow_html=True
-    )
+with st.sidebar:
+    st.title("🛒 Shopper Spectrum")
+    if st.button("🛍️  Product Recommendation", use_container_width=True):
+        st.session_state.page = "rec"
+        st.rerun()
 
-sidebar_btn("rec", "Product Recommendation", "🛍️")
-sidebar_btn("seg", "Customer Segmentation",  "👥")
+    if st.button("👥  Customer Segmentation",  use_container_width=True):
+        st.session_state.page = "seg"
+        st.rerun()
 
-st.sidebar.markdown("---")
-st.sidebar.caption("© 2025 Shopper Spectrum")
+    st.markdown("---")
+    st.caption("© 2025 Shopper Spectrum")
+
 
 # -------------------------------------------------------------------
 # 5A.  PRODUCT RECOMMENDATION PAGE
@@ -154,9 +155,9 @@ if page == "rec":
     st.markdown("Type a product name as sold on your site and receive similar items that customers often buy together.")
 
     # ------------------ data setup ------------------
-    csv_path = Path("customer_recs.csv")
+    csv_path = Path("customer_data_with_recommendations.csv")
     if not csv_path.exists():
-        st.error("CSV ‘customer_recs.csv’ not found.")
+        st.error("CSV ‘customer_data_with_recommendations.csv’ not found.")
         st.stop()
 
     df = load_customer_csv(csv_path)
