@@ -1,4 +1,3 @@
-google
 joblib
 matplotlib
 numpy
@@ -8,6 +7,3 @@ scipy
 seaborn
 scikit-learn
 streamlit
-tabulate
-warnings
-yellowbrick
