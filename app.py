@@ -115,25 +115,27 @@ if section == "Customer Segmentation":
         st.error("Trained K-Means model (kmeans_rfm_model.pkl) not found.")
         st.stop()
 
-    model = load_kmeans_model(str(kmeans_path))
+    # ---------- NEW: load both scaler & model --------------------------------
+    bundle = load_kmeans_model(str(kmeans_path))
+    scaler = bundle["scaler"]        # ← same key you used when dumping
+    kmeans = bundle["model"]
 
     # Numeric inputs
     col1, col2, col3 = st.columns(3)
     with col1:
-        recency = st.number_input("Recency (days)", min_value=0, value=30)
+        recency = st.number_input("Recency (days)",     min_value=0,  value=30)
     with col2:
-        frequency = st.number_input("Frequency (# purchases)", min_value=0, value=5)
+        frequency = st.number_input("Frequency (#)",    min_value=0,  value=5)
     with col3:
-        monetary = st.number_input("Monetary (total spend)", min_value=0.0, value=500.0)
+        monetary = st.number_input("Monetary (₹ total)",min_value=0.0,value=500.0)
 
     if st.button("Predict Cluster", use_container_width=True):
-        sample = np.array([[recency, frequency, monetary]])
-        cluster = int(model.predict(sample)[0])
+        sample   = np.array([[recency, frequency, monetary]])
+        sample_z = scaler.transform(sample)             # ← scale first
+        cluster  = int(kmeans.predict(sample_z)[0])
 
-        seg_map = {0: "High-Value",
-                   1: "Regular",
-                   2: "Occasional",
-                   3: "At-Risk"}
+        seg_map = {0: "High-Value", 1: "Regular",
+                   2: "Occasional", 3: "At-Risk"}
         seg_label = seg_map.get(cluster, f"Cluster {cluster}")
         st.success(f"💡 Predicted Segment: **{seg_label}**  (cluster {cluster})")
 
