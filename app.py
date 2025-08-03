@@ -90,22 +90,27 @@ if "page" in qs:
 
 def nav_button(key, label, color):
     selected = "selected" if st.session_state.page == key else ""
+    # When clicked, the link itself changes the query string **and**
+    # triggers a full page reload → Streamlit reruns automatically.
     st.sidebar.markdown(
         f"""
-        <div class="nav-btn {selected}" onclick="window.location.href='?page={key}'">
-            <div class="icon-circle" style="background:{color};"></div>{label}
-        </div>
+        <a href="?page={key}" style="text-decoration:none">
+            <div class="nav-btn {selected}">
+                <div class="icon-circle" style="background:{color};"></div>{label}
+            </div>
+        </a>
         """,
         unsafe_allow_html=True
     )
 
-st.sidebar.markdown("### Dashboard")
-nav_button("rec", "Product Recommendation", "#e63946")  # Red
-nav_button("seg", "Customer Segmentation", "#4b4bff")   # Blue
-st.sidebar.markdown("---")
+with st.sidebar:
+    if st.button("🛍️ Product Recommendation", key="nav_rec"):
+        st.session_state.page = "rec"
+        st.experimental_rerun()
 
-page = st.session_state.page
-
+    if st.button("👥 Customer Segmentation", key="nav_seg"):
+        st.session_state.page = "seg"
+        st.experimental_rerun()
 # ===================================================================
 # 4A.  PRODUCT RECOMMENDATION PAGE
 # ===================================================================
