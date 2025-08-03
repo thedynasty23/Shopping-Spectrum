@@ -88,6 +88,19 @@ qs = st.query_params
 if "page" in qs:
     st.session_state.page = qs["page"] if isinstance(qs["page"], str) else qs["page"][0]
 
+# -------------------------------------------------------------------
+# 3.   Sidebar Navigation
+# -------------------------------------------------------------------
+if "page" not in st.session_state:
+    st.session_state.page = "rec"          # default tab
+
+qs = st.query_params
+if "page" in qs:
+    # qs["page"] can be list or str → normalise to str
+    st.session_state.page = qs["page"] if isinstance(qs["page"], str) else qs["page"][0]
+
+page = st.session_state.page              
+
 def nav_button(key, label, color):
     selected = "selected" if st.session_state.page == key else ""
     # When clicked, the link itself changes the query string **and**
