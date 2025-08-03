@@ -122,67 +122,69 @@ with st.sidebar:
 # ===================================================================
 # 4A.  PRODUCT RECOMMENDATION PAGE
 # ===================================================================
-if page == "rec":
-    st.header("🔍 Product Recommendation")
-    data_path = Path("customer_data_with_recommendations.csv")
+# app.py  (excerpt)
 
-    if not data_path.exists():
-        st.error("Required data file 'customer_data_with_recommendations.csv' not found.")
-        st.stop()
-
-    with st.spinner("Loading data and similarity matrix..."):
-        df = load_customer_csv(data_path)
-        sim_df, desc2code, code2desc = build_similarity_and_lookup(df)
-
-    description = st.selectbox(
-        "Select a product description:",
-        sorted(desc2code.index),
-        help="Dropdown of available product descriptions"
-    )
-
-    k = st.slider("Number of similar products to show", 1, 10, 5)
-
-    if st.button("Recommend"):
-    try:
-        code = desc2code[description]          # product chosen by user
+# … previous code …
+if st.button("Recommend"):          # <-- line 145
+    try:                            # <-- start of indented block
+        code = desc2code[description]
         scores = (
-            sim_df.loc[code]                   # similarity scores for that code
-                  .drop(code)                  # exclude itself
+            sim_df.loc[code]
+                  .drop(code)
                   .sort_values(ascending=False)
         )
-        top_codes = scores.head(k).index       # k most-similar codes
+        top_codes = scores.head(k).index
 
-        # Build a mapping StockCode ➜ Description directly from the CSV
+        # build full StockCode ➔ Description mapping
         code2desc_full = (
-            df[['Rec1_StockCode','Rec1_Description',
-                'Rec2_StockCode','Rec2_Description',
-                'Rec3_StockCode','Rec3_Description',
-                'Rec4_StockCode','Rec4_Description',
-                'Rec5_StockCode','Rec5_Description',
-                'Rec6_StockCode','Rec6_Description',
-                'Rec7_StockCode','Rec7_Description',
-                'Rec8_StockCode','Rec8_Description',
-                'Rec9_StockCode','Rec9_Description',
-                'Rec10_StockCode','Rec10_Description']]
-            .set_index(lambda x: x // 2)       # pair codes with descriptions
-            .stack()                           # long form
-            .dropna()                          # keep valid cells
-            .unstack(0)                        # two columns: code & desc
-            .rename(columns={0: 'StockCode', 1: 'Description'})
+            df[
+                [
+                    'Rec1_StockCode', 'Rec1_Description',
+                    'Rec2_StockCode', 'Rec2_Description',
+                    'Rec3_StockCode', 'Rec3_Description',
+                    'Rec4_StockCode', 'Rec4_Description',
+                    'Rec5_StockCode', 'Rec5_Description',
+                    'Rec6_StockCode', 'Rec6_Description',
+                    'Rec7_StockCode', 'Rec7_Description',
+                    'Rec8_StockCode', 'Rec8_Description',
+                    'Rec9_StockCode', 'Rec9_Description',
+                    'Rec10_StockCode', 'Rec10_Description',
+                ]
+            ]
+            .melt(value_vars=[
+                'Rec1_StockCode', 'Rec2_StockCode', 'Rec3_StockCode',
+                'Rec4_StockCode', 'Rec5_StockCode', 'Rec6_StockCode',
+                'Rec7_StockCode', 'Rec8_StockCode', 'Rec9_StockCode',
+                'Rec10_StockCode'
+            ],
+            var_name='dummy',
+            value_name='StockCode')
+            .join(
+                df.melt(
+                    value_vars=[
+                        'Rec1_Description', 'Rec2_Description',
+                        'Rec3_Description', 'Rec4_Description',
+                        'Rec5_Description', 'Rec6_Description',
+                        'Rec7_Description', 'Rec8_Description',
+                        'Rec9_Description', 'Rec10_Description'
+                    ],
+                    value_name='Description'
+                )['Description']
+            )
+            .dropna()
         )
-
-        # Create a dict for fast lookup
-        csv_lookup = dict(zip(code2desc_full['StockCode'],
-                              code2desc_full['Description']))
+        csv_lookup = dict(
+            zip(code2desc_full['StockCode'], code2desc_full['Description'])
+        )
 
         st.subheader("Products customers also buy:")
         for c in top_codes:
             desc = csv_lookup.get(c)
-            if desc:                           # only show if we have a name
+            if desc:                # only display if description exists
                 st.write(f"• **{desc}**")
-        # If a code has no description, it’s skipped—no “Unknown product” shown
     except Exception as e:
         st.error(f"Recommendation failed: {e}")
+
 
 # ===================================================================
 # 4B.  CUSTOMER SEGMENTATION PAGE
