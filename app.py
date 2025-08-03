@@ -62,22 +62,27 @@ st.set_page_config(
 # -------------------------------------------------------------------
 # 3.  Global CSS  (white theme + light accent widgets)
 # -------------------------------------------------------------------
-ACCENT = "#4095FF"        # light blue accent for rectangles
+ACCENT      = "#4095FF"     # light-blue brand colour
+SIDEBAR_BG  = "#f2f2f2"     # light-grey sidebar
+DROPDOWN_FG = "#ffffff"     # white font inside selectbox
 
 st.markdown(
     f"""
     <style>
         /* ------------- GLOBAL ------------- */
         body, .stApp {{
-            background:#ffffff !important;    /* white background  */
-            color:#000000 !important;         /* black text by default */
-            font-family: "Inter", sans-serif;
+            background:#ffffff !important;
+            color:#000000 !important;
+            font-family:"Inter",sans-serif;
         }}
 
         /* ------------- SIDEBAR ------------- */
         section[data-testid="stSidebar"] > div:first-child {{
+            background:{SIDEBAR_BG} !important;   /* light-grey fill  */
             border-right:1px solid #e0e0e0;
         }}
+
+        /* sidebar navigation buttons */
         .sidebar-btn {{
             display:flex;
             align-items:center;
@@ -90,28 +95,34 @@ st.markdown(
             text-decoration:none;
         }}
         .sidebar-btn:hover {{
-            background:#f4f6ff;
+            background:#e8e8e8;
         }}
         .sidebar-btn.selected {{
             background:{ACCENT};
             color:#ffffff;
         }}
 
-        /* ------------- RECTANGLE WIDGETS ------------- */
+        /* ------------- WIDGET COLORS ------------- */
         div.stButton > button,
         .stNumberInput input,
         .stAlert,
         .stMetric {{
-            background:{ACCENT} !important;   /* light accent fill  */
-            color:#ffffff     !important;     /* white text         */
+            background:{ACCENT} !important;
+            color:#ffffff     !important;
             border:1px solid {ACCENT} !important;
         }}
         div.stButton > button:hover {{
-            background:#2577EB !important;    /* darker on hover    */
+            background:#2577EB !important;
         }}
 
-        /* keep labels / headers black */
-        label, h1, h2, h3, h4, h5, h6, p, span, div {{
+        /* ------------- SELECTBOX FONT COLOR ------------- */
+        /* Streamlit wraps the select element; target it for font color */
+        .stSelectbox div[data-baseweb="select"] div[role="combobox"] {{
+            color:{DROPDOWN_FG} !important;     /* white product names */
+        }}
+
+        /* keep all other labels / headers black */
+        label,h1,h2,h3,h4,h5,h6,p,span,div {{
             color:#000000;
         }}
     </style>
