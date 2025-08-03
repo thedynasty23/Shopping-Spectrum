@@ -110,34 +110,33 @@ if choice.endswith("Recommendation"):
         for c in top_codes:
             st.write(f"• **{code2desc.get(c, c)}**")
 
-# ===================================================================
-# 4B.  CUSTOMER SEGMENTATION
-# ===================================================================
+# -------------------------------------------------------------------
+# 4B.  CUSTOMER SEGMENTATION  (no scaler in pickle)
+# -------------------------------------------------------------------
 else:
     st.header("👥 Customer Segmentation")
+
     pkl_path = Path("kmeans_rfm_model.pkl")
     if not pkl_path.exists():
-        st.error("Trained model not found.")
+        st.error("Trained K-Means model not found.")
         st.stop()
 
-    bundle = load_bundle(pkl_path)
-    scaler = bundle["scaler"]; kmeans = bundle["model"]
+    kmeans = load_bundle(pkl_path)   # <— returns the estimator itself
 
     col1, col2, col3 = st.columns(3)
-    with col1:  recency   = st.number_input("Recency (days)",       0, value=30)
-    with col2:  frequency = st.number_input("Frequency (purchases)",0, value=5)
-    with col3:  monetary  = st.number_input("Monetary (total spend)",0.0, value=500.0)
+    with col1:
+        recency   = st.number_input("Recency (days)",             0, value=30)
+    with col2:
+        frequency = st.number_input("Frequency (purchases)",      0, value=5)
+    with col3:
+        monetary  = st.number_input("Monetary (total spend ₹)",   0.0, value=500.0)
 
-    with st.expander("ℹ️  What do these mean?"):
-        st.markdown("""
-        • **Recency** – Days since last purchase  
-        • **Frequency** – Number of orders placed  
-        • **Monetary** – Total spend amount
-        """)
     if st.button("Predict segment"):
-        X_scaled = scaler.transform([[recency, frequency, monetary]])
-        cluster  = int(kmeans.predict(X_scaled)[0])
-        labels   = {0:"High-Value",1:"Regular",2:"Occasional",3:"At-Risk"}
+        # Pass raw features directly: shape (1, 3)
+        cluster = int(kmeans.predict([[recency, frequency, monetary]])[0])
+
+        labels = {0: "High-Value", 1: "Regular",
+                  2: "Occasional", 3: "At-Risk"}
         st.success(f"Predicted segment → **{labels.get(cluster, f'Cluster {cluster}')}**")
 
 # -------------------------------------------------------------------
