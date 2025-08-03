@@ -19,6 +19,12 @@ def load_customer_csv(csv_path: str) -> pd.DataFrame:
 
 @st.cache_resource(show_spinner=False)
 def build_similarity_and_lookup(df: pd.DataFrame):
+    # inside build_similarity_and_lookup(df) – add just after the function starts
+    if 'Description' not in df.columns or 'StockCode' not in df.columns:
+        df = df.copy()
+        df['Description'] = df['Rec1_Description']
+        df['StockCode']   = df['Rec1_StockCode']
+
     # Build description↔code lookup  (uses first occurrence only)
     lookup = df[['Description', 'StockCode']].drop_duplicates().set_index('Description')['StockCode']
     reverse_lookup = lookup.reset_index().set_index('StockCode')['Description']
